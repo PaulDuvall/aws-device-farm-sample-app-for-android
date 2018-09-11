@@ -30,12 +30,6 @@ Parameters:
     Type: String
     Default: "aws/codebuild/ubuntu-base:14.04"
     Description: The build image to use for building the app
-  DeviceFarmProjectId:
-    Type: String
-    Description: Project Id for existing Device Farm
-  DevicePoolArn:
-    Type: String
-    Description: ARN for a Device Pool (types of devices on which to run mobile app tests)
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -68,6 +62,20 @@ Metadata:
       BuildImage: 
         default: CodeBuild image
 Resources:
+  DeviceFarmProjectId:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub ${AWS::StackName}-device-farm-project-id
+      Type: "String"
+      Value: "INCORRECT"
+      Description: "Project Id for existing Device Farm"
+  DevicePoolArn:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub ${AWS::StackName}-device-pool-arn
+      Type: "String"
+      Value: "INCORRECT"
+      Description: "ARN for a Device Pool (types of devices on which to run mobile app tests)"
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
@@ -142,7 +150,7 @@ Resources:
       BucketName: !Sub ${AWS::StackName}-codepipeline-files
   BuildAndroidApp:
     Type: AWS::CodeBuild::Project
-    DependsOn: CodeBuildRole
+    DependsOn: [CodeBuildRole, DeviceFarmProjectId, DevicePoolArn]
     Properties:
       Name:
         Ref: AWS::StackName
@@ -171,9 +179,11 @@ Resources:
                 - echo "`cat devicefarm-arn-${AWS::StackName}.txt`" | cut -c 51-86 > devicefarm-projectid-only-${AWS::StackName}.txt
                 - aws s3 cp devicefarm-arn-${AWS::StackName}.txt s3://${PipelineBucket}
                 - aws s3 cp devicefarm-projectid-only-${AWS::StackName}.txt s3://${PipelineBucket}
-                - aws devicefarm create-device-pool --name pool-1401 --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
+                - aws devicefarm create-device-pool --name pool-${AWS::StackName} --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
                 - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-devicepool-${AWS::StackName}.txt > devicepool-${AWS::StackName}.txt
                 - aws s3 cp devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
+                - aws ssm put-parameter --name ${AWS::StackName}-device-farm-project-id --type "String" --value "`cat devicefarm-projectid-only-${AWS::StackName}.txt`" --overwrite --region us-west-2 
+                - aws ssm put-parameter --name ${AWS::StackName}-device-pool-arn --type "String" --value "`cat devicepool-${AWS::StackName}.txt`" --overwrite --region us-west-2 
           artifacts:
             files:
               - '**/*'
@@ -249,3 +259,9 @@ Outputs:
   PipelineUrl:
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
     Description: CodePipeline URL
+  DeviceFarmProjectId:
+    Value: !Ref DeviceFarmProjectId
+    Description: DeviceFarmProjectId
+  DevicePoolArn:
+    Value: !Ref DevicePoolArn
+    Description: DevicePoolArn
