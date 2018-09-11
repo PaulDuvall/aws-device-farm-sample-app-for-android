@@ -166,10 +166,14 @@ Resources:
               commands:
                 - chmod +x ./gradlew
                 - ./gradlew assembleDebug
-                - aws devicefarm create-project --name pmd-df-project-1350 --region us-west-2 > tmp-1350.txt
-                - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-1350.txt > tmp-devicefarmarn-1350.txt
-                - aws s3 cp tmp-devicefarmarn-1350.txt s3://${PipelineBucket}
-                - aws devicefarm create-device-pool --name pool-1350 --rules ./device-pool-rules.json --project-arn "`cat tmp-devicefarmarn-1350.txt`" --region us-west-2 >  tmp-devicePool-1350.txt
+                - aws devicefarm create-project --name ${AWS::StackName} --region us-west-2 > devicefarm-project-${AWS::StackName}.txt
+                - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' devicefarm-project-${AWS::StackName}.txt > devicefarm-arn-${AWS::StackName}.txt
+                - echo "`cat devicefarm-arn-${AWS::StackName}.txt`" | cut -c 51-86 > devicefarm-projectid-only-${AWS::StackName}.txt
+                - aws s3 cp devicefarm-arn-${AWS::StackName}.txt s3://${PipelineBucket}
+                - aws s3 cp devicefarm-projectid-only-${AWS::StackName}.txt s3://${PipelineBucket}
+                - aws devicefarm create-device-pool --name pool-1401 --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
+                - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-devicepool-${AWS::StackName}.txt > devicepool-${AWS::StackName}.txt
+                - aws s3 cp devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
           artifacts:
             files:
               - '**/*'
@@ -190,7 +194,7 @@ Resources:
             Version: '1'
             Provider: GitHub
           OutputArtifacts:
-          - Name: SourceOutput
+          - Name: SourceArtifact
           Configuration:
             Owner: !Ref GitHubUser
             Repo: !Ref GitHubRepo
@@ -206,9 +210,9 @@ Resources:
             Version: '1'
             Provider: CodeBuild
           InputArtifacts:
-          - Name: SourceOutput
+          - Name: SourceArtifact
           OutputArtifacts:
-          - Name: DeployOutput
+          - Name: DeployArtifact
           Configuration:
             ProjectName: !Ref BuildAndroidApp
           RunOrder: 1
@@ -221,7 +225,7 @@ Resources:
             Version: '1'
             Provider: DeviceFarm
           InputArtifacts:
-          - Name: DeployOutput
+          - Name: DeployArtifact
           OutputArtifacts: []
           Configuration:
             RecordAppPerformanceData: true
