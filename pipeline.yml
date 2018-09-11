@@ -152,26 +152,28 @@ Resources:
         - CodeBuildRole
         - Arn
       Artifacts:
-        Type: no_artifacts
+        Type: CODEPIPELINE
       Environment:
-        EnvironmentVariables:
-        - Name: S3_BUCKET
-          Value:
-            Ref: PipelineBucket
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/android-java-8:26.1.1
       Source:
-        BuildSpec: buildspec.yml
-        Location:
-          Fn::Join:
-          - ''
-          - - 'https://github.com/'
-            - Ref: GitHubUser
-            - "/"
-            - Ref: GitHubRepo
-            - "/"
-        Type: GITHUB
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+            post_build:
+              commands:
+                - chmod +x ./gradlew
+                - ./gradlew assembleDebug
+                - aws devicefarm create-project --name pmd-df-project-1350 --region us-west-2 > tmp-1350.txt
+                - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-1350.txt > tmp-devicefarmarn-1350.txt
+                - aws s3 cp tmp-devicefarmarn-1350.txt s3://${PipelineBucket}
+                - aws devicefarm create-device-pool --name pool-1350 --rules ./device-pool-rules.json --project-arn "`cat tmp-devicefarmarn-1350.txt`" --region us-west-2 >  tmp-devicePool-1350.txt
+          artifacts:
+            files:
+              - '**/*'
+            discard-paths: yes
       TimeoutInMinutes: 10
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -197,7 +199,7 @@ Resources:
           RunOrder: 1
       - Name: Build
         Actions:
-        - Name: Artifact
+        - Name: BuildAndroidApp
           ActionTypeId:
             Category: Build
             Owner: AWS
