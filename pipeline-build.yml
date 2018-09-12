@@ -158,8 +158,6 @@ Resources:
           phases:
             post_build:
               commands:
-                - chmod +x ./gradlew
-                - ./gradlew assembleDebug
                 - aws devicefarm create-project --name ${AWS::StackName} --region us-west-2 > devicefarm-project-${AWS::StackName}.txt
                 - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' devicefarm-project-${AWS::StackName}.txt > devicefarm-arn-${AWS::StackName}.txt
                 - echo "`cat devicefarm-arn-${AWS::StackName}.txt`" | cut -c 51-86 > devicefarm-projectid-only-${AWS::StackName}.txt
