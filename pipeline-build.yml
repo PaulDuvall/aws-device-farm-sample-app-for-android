@@ -134,7 +134,7 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       BucketName: !Sub ${AWS::StackName}-codepipeline-files
-  BuildAndroidApp:
+  BuildDeviceFarm:
     Type: AWS::CodeBuild::Project
     DependsOn: [CodeBuildRole, PipelineBucket]
     Properties:
@@ -166,6 +166,8 @@ Resources:
                 - aws devicefarm create-device-pool --name pool-${AWS::StackName} --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
                 - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-devicepool-${AWS::StackName}.txt > devicepool-${AWS::StackName}.txt
                 - aws s3 cp devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
+                - aws s3 cp tmp-devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
+                - echo "`cat tmp-devicepool-${AWS::StackName}.txt`"
                 - aws cloudformation create-stack --stack-name ${AWS::StackName}-deploy-devicefarm --template-body file://pipeline-deploy.yml --parameters ParameterKey=DeviceFarmProjectId,ParameterValue="`cat devicefarm-projectid-only-${AWS::StackName}.txt`" ParameterKey=DevicePoolArn,ParameterValue="`cat devicepool-${AWS::StackName}.txt`" ParameterKey=GitHubToken,ParameterValue=${GitHubToken} --capabilities CAPABILITY_NAMED_IAM --no-disable-rollback
           artifacts:
             files:
@@ -196,7 +198,7 @@ Resources:
           RunOrder: 1
       - Name: Build
         Actions:
-        - Name: BuildAndroidApp
+        - Name: BuildDeviceFarm
           ActionTypeId:
             Category: Build
             Owner: AWS
@@ -207,7 +209,7 @@ Resources:
           OutputArtifacts:
           - Name: DeployArtifact
           Configuration:
-            ProjectName: !Ref BuildAndroidApp
+            ProjectName: !Ref BuildDeviceFarm
           RunOrder: 1
       ArtifactStore:
         Type: S3

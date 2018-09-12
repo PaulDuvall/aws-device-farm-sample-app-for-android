@@ -194,9 +194,9 @@ Resources:
             FuzzEventThrottle: 50
             ProjectId: !Ref DeviceFarmProjectId
             App: app-debug.apk
-            FuzzEventCount: 6000
+            FuzzEventCount: 500
             RadioBluetoothEnabled: true
-            RecordVideo: true
+            RecordVideo: false
             RadioWifiEnabled: true
             RadioNfcEnabled: true
             RadioGpsEnabled: true
