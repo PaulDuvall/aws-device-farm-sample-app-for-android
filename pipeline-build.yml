@@ -174,6 +174,7 @@ Resources:
                 - aws devicefarm create-device-pool --name pool-${AWS::StackName} --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
                 - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-devicepool-${AWS::StackName}.txt > devicepool-${AWS::StackName}.txt
                 - aws s3 cp devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
+                - aws cloudformation create-stack --stack-name ${AWS::StackName}-deploy-devicefarm --template-body file://sample.yml --parameters ParameterKey=S3Bucket,ParameterValue=${PipelineBucket} ParameterKey=DeviceFarmProjectId,ParameterValue=${DeviceFarmProjectId} ParameterKey=DevicePoolArn,ParameterValue=${DevicePoolArn} --capabilities CAPABILITY_NAMED_IAM --no-disable-rollback
           artifacts:
             files:
               - '**/*'
@@ -215,32 +216,6 @@ Resources:
           - Name: DeployArtifact
           Configuration:
             ProjectName: !Ref BuildAndroidApp
-          RunOrder: 1
-      - Name: Test
-        Actions:
-        - Name: TestMobileApp
-          ActionTypeId:
-            Category: Test
-            Owner: AWS
-            Version: '1'
-            Provider: DeviceFarm
-          InputArtifacts:
-          - Name: DeployArtifact
-          OutputArtifacts: []
-          Configuration:
-            RecordAppPerformanceData: true
-            AppType: Android
-            FuzzEventThrottle: 50
-            ProjectId: !Ref DeviceFarmProjectId
-            App: app-debug.apk
-            FuzzEventCount: 6000
-            RadioBluetoothEnabled: true
-            RecordVideo: true
-            RadioWifiEnabled: true
-            RadioNfcEnabled: true
-            RadioGpsEnabled: true
-            DevicePoolArn: !Ref DevicePoolArn
-            TestType: BUILTIN_FUZZ
           RunOrder: 1
       ArtifactStore:
         Type: S3

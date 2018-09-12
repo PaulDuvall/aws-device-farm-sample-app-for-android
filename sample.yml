@@ -1,0 +1,28 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stelligent CloudFormation Sample Template ** This template creates one
+  or more Amazon resources. You will be billed for the AWS resources used if you create
+  a stack from this template.
+Parameters:
+  S3Bucket:
+    Type: String
+    Description: Pipeline Bucket
+  DeviceFarmProjectId:
+    Type: String
+    Description: Project ID for the previously created Device Farm
+  DevicePoolArn:
+    Type: String
+    Description: ARN for the previously created Device Pool
+Resources:
+  MyQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName:
+        Fn::Join:
+        - ''
+        - - SampleQueue-
+          - Ref: AWS::StackName
+Outputs:
+  MyAWSAccountId:
+    Value:
+      Ref: AWS::AccountId
