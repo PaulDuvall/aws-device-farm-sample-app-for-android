@@ -109,7 +109,7 @@ Resources:
             Version: '1'
             Provider: DeviceFarm
           InputArtifacts:
-          - Name: DeployArtifact
+          - Name: SourceArtifact
           OutputArtifacts: []
           Configuration:
             RecordAppPerformanceData: true
