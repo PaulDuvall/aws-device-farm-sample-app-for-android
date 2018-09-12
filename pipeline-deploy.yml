@@ -90,16 +90,15 @@ Resources:
           Name: Source
           ActionTypeId:
             Category: Source
-            Owner: ThirdParty
+            Owner: AWS
             Version: '1'
-            Provider: GitHub
+            Provider: S3
           OutputArtifacts:
           - Name: SourceArtifact
           Configuration:
-            Owner: !Ref GitHubUser
-            Repo: !Ref GitHubRepo
-            Branch: !Ref GitHubBranch
-            OAuthToken: !Ref GitHubToken
+            S3Bucket: pmd-devicefarm-1439-codepipeline-files
+            PollForSourceChanges: false
+            S3ObjectKey: pmd-devicefarm-1439-/SourceArti/ns8uoz2.zip
           RunOrder: 1
       - Name: Test
         Actions:

@@ -30,12 +30,6 @@ Parameters:
     Type: String
     Default: "aws/codebuild/ubuntu-base:14.04"
     Description: The build image to use for building the app
-  DeviceFarmProjectId:
-    Type: String
-    Description: Project ID for the previously created Device Farm
-  DevicePoolArn:
-    Type: String
-    Description: ARN for the previously created Device Pool
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -174,7 +168,7 @@ Resources:
                 - aws devicefarm create-device-pool --name pool-${AWS::StackName} --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
                 - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-devicepool-${AWS::StackName}.txt > devicepool-${AWS::StackName}.txt
                 - aws s3 cp devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
-                - aws cloudformation create-stack --stack-name ${AWS::StackName}-deploy-devicefarm --template-body file://sample.yml --parameters ParameterKey=S3Bucket,ParameterValue=${PipelineBucket} ParameterKey=DeviceFarmProjectId,ParameterValue=${DeviceFarmProjectId} ParameterKey=DevicePoolArn,ParameterValue=${DevicePoolArn} --capabilities CAPABILITY_NAMED_IAM --no-disable-rollback
+                - aws cloudformation create-stack --stack-name ${AWS::StackName}-deploy-devicefarm --template-body file://sample.yml --parameters ParameterKey=S3Bucket,ParameterValue=${PipelineBucket} ParameterKey=DeviceFarmProjectId,ParameterValue="`cat devicefarm-projectid-only-${AWS::StackName}.txt`" ParameterKey=DevicePoolArn,ParameterValue="`cat devicepool-${AWS::StackName}.txt`" --capabilities CAPABILITY_NAMED_IAM --no-disable-rollback
           artifacts:
             files:
               - '**/*'
