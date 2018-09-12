@@ -5,6 +5,9 @@ Parameters:
   S3Bucket:
     Type: String
     Description: Pipeline Bucket
+  S3SourceKey:
+    Type: String
+    Description: Key contained ZIP file for source artifact
   DeviceFarmProjectId:
     Type: String
     Description: Project ID for the previously created Device Farm
@@ -96,9 +99,9 @@ Resources:
           OutputArtifacts:
           - Name: SourceArtifact
           Configuration:
-            S3Bucket: pmd-devicefarm-1439-codepipeline-files
+            S3Bucket: !Ref S3Bucket
             PollForSourceChanges: false
-            S3ObjectKey: pmd-devicefarm-1439-/SourceArti/ns8uoz2.zip
+            S3ObjectKey: !Ref S3SourceKey
           RunOrder: 1
       - Name: Test
         Actions:

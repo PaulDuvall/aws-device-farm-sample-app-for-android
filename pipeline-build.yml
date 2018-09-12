@@ -134,6 +134,8 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       BucketName: !Sub ${AWS::StackName}-codepipeline-files
+      VersioningConfiguration:
+        Status: Enabled
   BuildAndroidApp:
     Type: AWS::CodeBuild::Project
     DependsOn: [CodeBuildRole, PipelineBucket]
@@ -168,7 +170,10 @@ Resources:
                 - aws devicefarm create-device-pool --name pool-${AWS::StackName} --rules file://device-pool-rules.json --project-arn "`cat devicefarm-arn-${AWS::StackName}.txt`" --region us-west-2 >  tmp-devicepool-${AWS::StackName}.txt
                 - grep -m1 -oP '"arn"\s*:\s*"\K[^"]+' tmp-devicepool-${AWS::StackName}.txt > devicepool-${AWS::StackName}.txt
                 - aws s3 cp devicepool-${AWS::StackName}.txt s3://${PipelineBucket}
-                - aws cloudformation create-stack --stack-name ${AWS::StackName}-deploy-devicefarm --template-body file://pipeline-deploy.yml --parameters ParameterKey=S3Bucket,ParameterValue=${PipelineBucket} ParameterKey=DeviceFarmProjectId,ParameterValue="`cat devicefarm-projectid-only-${AWS::StackName}.txt`" ParameterKey=DevicePoolArn,ParameterValue="`cat devicepool-${AWS::StackName}.txt`" --capabilities CAPABILITY_NAMED_IAM --no-disable-rollback
+                - echo ${PipelineBucket} | cut -c 1-20 > tmp-source-key.txt
+                - aws s3api list-objects --bucket ${PipelineBucket} --query 'Contents[].{Key: Key, Size: Size}' --prefix "`cat tmp-source-key.txt`"/SourceArti > tmp-s3-key-json.txt
+                - grep -m1 -oP '"Key"\s*:\s*"\K[^"]+' tmp-s3-key-json.txt > tmp-s3-source-key.txt
+                - aws cloudformation create-stack --stack-name ${AWS::StackName}-deploy-devicefarm --template-body file://pipeline-deploy.yml --parameters ParameterKey=S3Bucket,ParameterValue=${PipelineBucket} ParameterKey=DeviceFarmProjectId,ParameterValue="`cat devicefarm-projectid-only-${AWS::StackName}.txt`" ParameterKey=DevicePoolArn,ParameterValue="`cat devicepool-${AWS::StackName}.txt`" ParameterKey=S3SourceKey,ParameterValue="`cat tmp-s3-source-key.txt`" --capabilities CAPABILITY_NAMED_IAM --no-disable-rollback
           artifacts:
             files:
               - '**/*'
