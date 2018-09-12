@@ -109,6 +109,37 @@ Resources:
             Resource: "*"
             Effect: Allow
           Version: '2012-10-17'
+  BuildAndroidApp:
+    Type: AWS::CodeBuild::Project
+    DependsOn: [CodeBuildRole, PipelineBucket]
+    Properties:
+      Name:
+        Ref: AWS::StackName
+      Description: Build application
+      ServiceRole:
+        Fn::GetAtt:
+        - CodeBuildRole
+        - Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/android-java-8:26.1.1
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+            post_build:
+              commands:
+                - chmod +x ./gradlew
+                - ./gradlew assembleDebug
+          artifacts:
+            files:
+              - '**/*'
+            discard-paths: yes
+      TimeoutInMinutes: 10
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
