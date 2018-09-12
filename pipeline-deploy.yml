@@ -2,12 +2,34 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deployment Pipeline to run tests via AWS Device Farm
 Parameters:
-  S3Bucket:
+  GitHubUser:
     Type: String
-    Description: Pipeline Bucket
-  S3SourceKey:
+    Description: GitHub User
+    Default: "PaulDuvall"
+  GitHubRepo:
     Type: String
-    Description: Key contained ZIP file for source artifact
+    Description: GitHub Repo to pull from. Only the Name. not the URL
+    Default: "aws-device-farm-sample-app-for-android"
+  GitHubBranch:
+    Type: String
+    Description: GitHub Branch
+    Default: "master"
+  GitHubToken:
+    NoEcho: true
+    Type: String
+    Description: Secret. It might look something like 9b189a1654643522561f7b3ebd44a1531a4287af OAuthToken with access to Repo. Go to https://github.com/settings/tokens
+  BuildType:
+    Type: String
+    Default: "LINUX_CONTAINER"
+    Description: The build container type to use for building the app
+  BuildComputeType:
+    Type: String
+    Default: "BUILD_GENERAL1_SMALL"
+    Description: The build compute type to use for building the app
+  BuildImage:
+    Type: String
+    Default: "aws/codebuild/ubuntu-base:14.04"
+    Description: The build image to use for building the app
   DeviceFarmProjectId:
     Type: String
     Description: Project ID for the previously created Device Farm
@@ -93,15 +115,31 @@ Resources:
           Name: Source
           ActionTypeId:
             Category: Source
-            Owner: AWS
+            Owner: ThirdParty
             Version: '1'
-            Provider: S3
+            Provider: GitHub
           OutputArtifacts:
           - Name: SourceArtifact
           Configuration:
-            S3Bucket: !Ref S3Bucket
-            PollForSourceChanges: false
-            S3ObjectKey: !Ref S3SourceKey
+            Owner: !Ref GitHubUser
+            Repo: !Ref GitHubRepo
+            Branch: !Ref GitHubBranch
+            OAuthToken: !Ref GitHubToken
+          RunOrder: 1
+      - Name: Build
+        Actions:
+        - Name: BuildAndroidApp
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Version: '1'
+            Provider: CodeBuild
+          InputArtifacts:
+          - Name: SourceArtifact
+          OutputArtifacts:
+          - Name: DeployArtifact
+          Configuration:
+            ProjectName: !Ref BuildAndroidApp
           RunOrder: 1
       - Name: Test
         Actions:
@@ -112,7 +150,7 @@ Resources:
             Version: '1'
             Provider: DeviceFarm
           InputArtifacts:
-          - Name: SourceArtifact
+          - Name: DeployArtifact
           OutputArtifacts: []
           Configuration:
             RecordAppPerformanceData: true
